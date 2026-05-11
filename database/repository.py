@@ -6,6 +6,41 @@ import aiosqlite
 
 from config import settings
 
+_MANAGER_CHAT_ID_KEY = "manager_chat_id"
+
+
+async def set_manager_chat_id(chat_id: int) -> None:
+    async with aiosqlite.connect(settings.db_path) as db:
+        await db.execute(
+            """
+            INSERT INTO bot_settings (key, value)
+            VALUES (?, ?)
+            ON CONFLICT(key) DO UPDATE SET value=excluded.value;
+            """,
+            (_MANAGER_CHAT_ID_KEY, str(int(chat_id))),
+        )
+        await db.commit()
+
+
+async def get_manager_chat_id() -> Optional[int]:
+    async with aiosqlite.connect(settings.db_path) as db:
+        db.row_factory = aiosqlite.Row
+        cursor = await db.execute(
+            "SELECT value FROM bot_settings WHERE key = ?;",
+            (_MANAGER_CHAT_ID_KEY,),
+        )
+        row = await cursor.fetchone()
+        if not row:
+            return None
+        raw = str(row["value"]).strip()
+        if not raw:
+            return None
+        try:
+            return int(raw)
+        except ValueError:
+            # Corrupted setting; treat as missing.
+            return None
+
 
 async def get_user_name(telegram_user_id: int) -> Optional[str]:
     async with aiosqlite.connect(settings.db_path) as db:

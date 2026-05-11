@@ -8,6 +8,14 @@ async def init_db() -> None:
         await db.execute("PRAGMA journal_mode=WAL;")
         await db.execute(
             """
+            CREATE TABLE IF NOT EXISTS bot_settings (
+                key TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
+            """
+        )
+        await db.execute(
+            """
             CREATE TABLE IF NOT EXISTS users (
                 telegram_user_id INTEGER PRIMARY KEY,
                 name TEXT NOT NULL
