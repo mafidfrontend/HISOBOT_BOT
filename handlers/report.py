@@ -92,10 +92,10 @@ def _field_prompt(step: int, *, prefill: dict[str, Any]) -> str:
     # Show current value as hint.
     current = prefill[field.key]
     if field.numeric:
-        return f"{field.prompt}\nHozirgi qiymat: {current}"
+        return f"{field.prompt}\nHozirgi qiymat: {current}\nO'zgartirmaslik uchun /skip"
     if field.key == "comment":
-        return f"{field.prompt}\nHozirgi izoh: {current or '-'}"
-    return f"{field.prompt}\nHozirgi qiymat: {current}"
+        return f"{field.prompt}\nHozirgi izoh: {current or '-'}\nO'zgartirmaslik uchun /skip"
+    return f"{field.prompt}\nHozirgi qiymat: {current}\nO'zgartirmaslik uchun /skip"
 
 
 async def _finish_collecting(message: Message, state: FSMContext) -> None:
@@ -274,16 +274,16 @@ async def collecting_handler(message: Message, state: FSMContext) -> None:
 
     field = FIELDS[step]
     try:
-        if field.key == "name":
+        raw = (message.text or "").strip()
+
+        # When editing/regenerating, allow /skip to keep the previous value shown in the prompt.
+        if raw.lower() == "/skip" and field.key in prefill and prefill.get(field.key) not in (None, ""):
+            answers[field.key] = prefill.get(field.key)
+        elif field.key == "name":
             # Allow empty -> will be replaced with stored name on finish.
             answers["name"] = parse_name(message.text)
         elif field.key == "comment":
-            raw = (message.text or "").strip()
-            if raw.lower() == "/skip":
-                # Keep previously stored comment when skipping during edit.
-                answers["comment"] = str(prefill.get("comment") or "")
-            else:
-                answers["comment"] = parse_comment(message.text)
+            answers["comment"] = parse_comment(message.text)
         elif field.numeric:
             answers[field.key] = parse_int(
                 message.text,
