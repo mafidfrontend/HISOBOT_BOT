@@ -278,7 +278,12 @@ async def collecting_handler(message: Message, state: FSMContext) -> None:
             # Allow empty -> will be replaced with stored name on finish.
             answers["name"] = parse_name(message.text)
         elif field.key == "comment":
-            answers["comment"] = parse_comment(message.text)
+            raw = (message.text or "").strip()
+            if raw.lower() == "/skip":
+                # Keep previously stored comment when skipping during edit.
+                answers["comment"] = str(prefill.get("comment") or "")
+            else:
+                answers["comment"] = parse_comment(message.text)
         elif field.numeric:
             answers[field.key] = parse_int(
                 message.text,
